@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>手机版打地鼠 (优化)</title>
+    <title>打地鼠达人</title>
     <style>
         /* CSS样式：极简卡通 + 移动端适配 */
         @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap');
@@ -103,6 +103,10 @@
         /* 地鼠弹出状态 */
         .hole.up .mole {
             top: 15%;
+        } 
+        
+        .mole-face, .mole-face * {
+            pointer-events: none; /* 让面部元素及其子元素忽略鼠标点击 */
         }
 
         /* 地鼠面部细节 (省略，与之前版本一致) */
@@ -375,7 +379,7 @@
 
     function startGame() {
         scoreBoard.textContent = 0;
-        timeRemaining = GAME_DURATION; // M3: 60 秒
+        timeRemaining = GAME_DURATION; // M3: 30 秒
         timeBoard.textContent = timeRemaining;
         score = 0;
         timeUp = false;
@@ -485,5 +489,6 @@
 </script>
 </body>
 </html>
+
 
 
