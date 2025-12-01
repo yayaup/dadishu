@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>打地鼠达人</title>
+    <title>打地鼠（炸弹版）</title>
     <style>
-        /* CSS样式：极简卡通 + 移动端适配 */
         @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap');
 
         :root {
@@ -30,7 +29,6 @@
             cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'  width='40' height='48' viewport='0 0 100 100' style='fill:black;font-size:24px;'><text y='50%'>🔨</text></svg>") 16 0, pointer; 
         }
 
-        /* 游戏区域容器 (移动端适配) */
         #game-board {
             position: relative;
             width: 90vw; 
@@ -47,7 +45,6 @@
             transition: transform 0.1s;
         }
 
-        /* 计分板和倒计时 */
         .hud {
             position: absolute;
             top: -40px;
@@ -61,7 +58,6 @@
             box-sizing: border-box;
         }
 
-        /* 坑洞Wrapper */
         .hole {
             position: relative;
             overflow: hidden;
@@ -71,7 +67,6 @@
             justify-content: center;
         }
 
-        /* 泥土堆（背景） */
         .dirt {
             position: absolute;
             bottom: -15%;
@@ -79,12 +74,10 @@
             height: 40%;
             background-color: var(--dirt-color);
             border-radius: 50%;
-            /* 关键：确保土堆始终在地鼠上方，实现遮挡 */
             z-index: 2; 
             box-shadow: inset 0 8px 15px rgba(0,0,0,0.3);
         }
 
-        /* 地鼠 */
         .mole {
             width: 80%;
             height: 100%;
@@ -93,23 +86,49 @@
             top: 100%; 
             border-radius: 40% 40% 10% 10%;
             transition: top 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            z-index: 1; /* 地鼠在土堆下方 */
+            z-index: 1; 
             display: flex;
             flex-direction: column;
             align-items: center;
             box-shadow: inset -5px -5px 0 rgba(0,0,0,0.1);
         }
 
-        /* 地鼠弹出状态 */
         .hole.up .mole {
             top: 15%;
-        } 
-        
-        .mole-face, .mole-face * {
-            pointer-events: none; /* 让面部元素及其子元素忽略鼠标点击 */
         }
 
-        /* 地鼠面部细节 (省略，与之前版本一致) */
+        /* 修正：确保点击穿透头部细节 */
+        .mole-face, .mole-face * {
+            pointer-events: none;
+        }
+
+        /* ------------------ 炸弹样式 ------------------ */
+        .mole.is-bomb {
+            background-color: #2c3e50; /* 炸弹主体颜色 */
+            border-radius: 50%; /* 圆形 */
+            width: 70%; 
+            height: 70%;
+            top: 30%; /* 调整位置 */
+            transform: scale(1.1);
+            box-shadow: 0 0 10px #e74c3c; /* 红色光晕 */
+        }
+        
+        .mole.is-bomb .mole-face {
+            display: none; /* 隐藏地鼠脸 */
+        }
+        
+        /* 炸弹符号 */
+        .mole.is-bomb::after {
+            content: '💣'; /* 炸弹 Emoji */
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 35px;
+            z-index: 5;
+        }
+        /* ----------------------------------------------- */
+
         .mole-face {
             width: 100%;
             position: relative;
@@ -139,7 +158,6 @@
             transform: translateX(-50%);
         }
 
-        /* 被击中时的样式 */
         .mole.whacked {
             background-color: #ff9ff3;
         }
@@ -158,10 +176,9 @@
             transform: rotate(90deg);
         }
         
-        /* 浮动得分特效 (省略，与之前版本一致) */
+        /* 浮动得分特效 */
         .score-pop {
             position: absolute;
-            color: #fff;
             font-size: 20px;
             font-weight: bold;
             pointer-events: none;
@@ -175,7 +192,6 @@
             100% { transform: translateY(-50px) scale(1.5); opacity: 0; }
         }
 
-        /* 震动类 (省略，与之前版本一致) */
         .shake {
             animation: shake 0.3s cubic-bezier(.36,.07,.19,.97) both;
         }
@@ -187,7 +203,6 @@
             40%, 60% { transform: translate3d(4px, 0, 0); }
         }
 
-        /* 结算界面 (省略，与之前版本一致) */
         #ui-layer {
             position: absolute;
             top: 0;
@@ -314,35 +329,36 @@
     const startBtn = document.getElementById('start-btn');
     const gameBoard = document.getElementById('game-board');
 
-    const GAME_DURATION = 30; // 游戏时长 30 秒 (M3)
-    const MAX_WAIT = 1000;     // 最慢频率等待时间 (70% 对应约 1200ms)
-    const MIN_WAIT = 400;     // 最快频率等待时间 (100% 对应约 600ms)
+    const GAME_DURATION = 30;
+    const MAX_WAIT = 1000;
+    const MIN_WAIT = 600;
+    
+    // 炸弹配置
+    const MAX_BOMBS = 3;             // 场上最多 3 个炸弹
+    const BOMB_PROBABILITY = 0.1;   // 10% 的概率出现炸弹
 
     let lastHole;
     let timeUp = true;
     let score = 0;
     let countdown;
     let timeRemaining = GAME_DURATION;
+    let activeBombs = 0; // 追踪当前场上炸弹数量
     
     let highScore = localStorage.getItem('whac_a_mole_high_score') || 0;
     finalHighScoreText.textContent = highScore; 
 
-    // M3: 根据游戏进程动态调整地鼠出现的随机等待时间
     function randomWaitTime() {
         const timeElapsed = GAME_DURATION - timeRemaining;
-        const progress = timeElapsed / GAME_DURATION; // 进度从 0 到 1
+        const progress = timeElapsed / GAME_DURATION;
         
-        // 线性调整最大等待时间，实现频率由慢到快
         const decreaseRange = MAX_WAIT - MIN_WAIT;
         const adjustedMax = MAX_WAIT - (decreaseRange * progress);
         
-        // 确保 adjustedMax 不低于 MIN_WAIT
-        const adjustedMinWait = Math.max(MIN_WAIT, adjustedMax * 0.45); // 确保随机范围有变化，且最小值不会变动
+        const adjustedMinWait = Math.max(MIN_WAIT, adjustedMax * 0.5);
         
         return Math.round(Math.random() * (adjustedMax - adjustedMinWait) + adjustedMinWait);
     }
 
-    // 随机选择坑洞 (不变)
     function randomHole(holes) {
         const idx = Math.floor(Math.random() * holes.length);
         const hole = holes[idx];
@@ -353,7 +369,6 @@
         return hole;
     }
 
-    // M3: 地鼠出现逻辑 (使用动态频率)
     function peep() {
         if (timeUp) return;
 
@@ -361,40 +376,54 @@
         const hole = randomHole(holes);
         const mole = hole.querySelector('.mole');
         
-        // 只有当前地鼠没有被击晕且在洞里时才弹出
+        // 炸弹生成逻辑
+        let shouldBeBomb = false;
+        if (!mole.classList.contains('up') && !mole.classList.contains('whacked')) {
+            // 只有当场上炸弹数量小于最大限制，且随机通过概率检查时，才会生成炸弹
+            shouldBeBomb = activeBombs < MAX_BOMBS && Math.random() < BOMB_PROBABILITY;
+        }
+
+        if (shouldBeBomb) {
+            mole.classList.add('is-bomb');
+            activeBombs++;
+        } else {
+            mole.classList.remove('is-bomb');
+        }
+
         if(!mole.classList.contains('whacked') && !hole.classList.contains('up')) {
             hole.classList.add('up');
         }
 
-        // 地鼠在未被击中时，等待 `time` 时间后自动缩回
         setTimeout(() => {
-            // 如果地鼠还在上面，且没有被击晕（即没被打中），则缩回
             if (hole.classList.contains('up') && !mole.classList.contains('whacked')) {
+                // 如果是未被点击的炸弹缩回，需要更新追踪计数
+                if (mole.classList.contains('is-bomb')) {
+                    activeBombs--;
+                    mole.classList.remove('is-bomb');
+                }
                 hole.classList.remove('up');
             }
-            // 调度下一个地鼠弹出
             if (!timeUp) peep(); 
         }, time); 
     }
 
     function startGame() {
         scoreBoard.textContent = 0;
-        timeRemaining = GAME_DURATION; // M3: 30 秒
+        timeRemaining = GAME_DURATION;
         timeBoard.textContent = timeRemaining;
         score = 0;
         timeUp = false;
+        activeBombs = 0; // 重置炸弹计数
         
         uiLayer.classList.add('hidden');
         
-        // 重置所有地鼠状态
         moles.forEach(mole => {
-            mole.classList.remove('whacked');
+            mole.classList.remove('whacked', 'is-bomb');
             mole.parentElement.classList.remove('up');
         });
 
         peep();
         
-        // M3: 倒计时逻辑
         countdown = setInterval(() => {
             timeRemaining--;
             timeBoard.textContent = timeRemaining;
@@ -408,13 +437,11 @@
     function endGame() {
         timeUp = true;
         
-        // 更新最高分
         if (score > highScore) {
             highScore = score;
             localStorage.setItem('whac_a_mole_high_score', highScore);
         }
 
-        // 刷新 UI
         titleText.textContent = "时间到!";
         titleText.style.color = "#e74c3c";
         currentScoreText.textContent = score;
@@ -424,11 +451,12 @@
         uiLayer.classList.remove('hidden');
     }
 
-    // 创建浮动文字特效 (不变)
-    function showFloatingText(x, y, text) {
+    // 浮动文字函数新增 color 参数
+    function showFloatingText(x, y, text, color = '#fff') {
         const el = document.createElement('div');
         el.classList.add('score-pop');
         el.textContent = text;
+        el.style.color = color; // 应用颜色
         
         const rect = gameBoard.getBoundingClientRect();
         el.style.left = (x - rect.left) + 'px';
@@ -441,7 +469,6 @@
         }, 800);
     }
 
-    // M1: 击打事件处理 (添加 0.2 秒击晕停留)
     function bonk(e) {
         if(timeUp) return; 
         
@@ -449,36 +476,48 @@
         const hole = mole.parentElement;
 
         if(mole.classList.contains('whacked')) return;
-
-        score++;
-        scoreBoard.textContent = score;
-
-        // 1. 立即标记为击晕状态
-        mole.classList.add('whacked'); 
-
-        // 2. 击晕停留 200ms
-        setTimeout(() => {
-            // 3. 200ms 后，移除 'up' 类，开始下潜动画 (0.4s)
-            hole.classList.remove('up'); 
-            
-            // 4. 下潜动画结束后，移除 'whacked' 状态，恢复正常表情，准备下一次弹出
-            setTimeout(() => {
-                mole.classList.remove('whacked');
-            }, 400); // 400ms 是 CSS transition 的时长
-            
-        }, 200); // M1: 击晕停留 200ms
         
-        // 5. 特效和震屏 (立即触发)
+        const isBomb = mole.classList.contains('is-bomb');
+
         const clientX = e.type === 'mousedown' ? e.clientX : e.touches[0].clientX;
         const clientY = e.type === 'mousedown' ? e.clientY : e.touches[0].clientY;
-        showFloatingText(clientX, clientY, '+1');
 
-        gameBoard.classList.remove('shake');
-        void gameBoard.offsetWidth; 
-        gameBoard.classList.add('shake');
+        if (isBomb) {
+            // 点击炸弹，扣分并震屏
+            score = Math.max(0, score - 2); 
+            activeBombs--; // 炸弹被点击，计数减 1
+            
+            showFloatingText(clientX, clientY, '-2', '#e74c3c');
+            
+            // 震屏 (仅炸弹触发)
+            gameBoard.classList.remove('shake');
+            void gameBoard.offsetWidth; 
+            gameBoard.classList.add('shake');
+
+        } else {
+            // 点击地鼠，加分
+            score++;
+            showFloatingText(clientX, clientY, '+1', '#fff');
+            
+            // 地鼠点击不震屏 (满足需求)
+        }
+        
+        scoreBoard.textContent = score;
+
+        // 击晕/下潜逻辑
+        mole.classList.add('whacked');
+        mole.classList.remove('is-bomb'); // 炸弹/地鼠被击中后，移除炸弹标记
+
+        setTimeout(() => {
+            hole.classList.remove('up'); 
+            
+            setTimeout(() => {
+                mole.classList.remove('whacked');
+            }, 400);
+            
+        }, 200); 
     }
 
-    // 绑定点击和触摸监听 (不变)
     moles.forEach(mole => {
         mole.addEventListener('mousedown', bonk);
         mole.addEventListener('touchstart', bonk); 
@@ -489,6 +528,3 @@
 </script>
 </body>
 </html>
-
-
-
