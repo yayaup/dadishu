@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>打地鼠呀</title>
+    <title>手机版打地鼠 (优化)</title>
     <style>
         /* CSS样式：极简卡通 + 移动端适配 */
         @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap');
@@ -27,16 +27,15 @@
             align-items: center;
             user-select: none;
             overflow: hidden;
-            /* 模拟锤子光标，移动端通常不显示，但保留桌面端效果 */
             cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'  width='40' height='48' viewport='0 0 100 100' style='fill:black;font-size:24px;'><text y='50%'>🔨</text></svg>") 16 0, pointer; 
         }
 
         /* 游戏区域容器 (移动端适配) */
         #game-board {
             position: relative;
-            width: 90vw; /* 占据视口宽度的90% */
-            max-width: 450px; /* 最大宽度限制 */
-            aspect-ratio: 1 / 1; /* 保持正方形 */
+            width: 90vw; 
+            max-width: 450px; 
+            aspect-ratio: 1 / 1; 
             background-color: var(--grass-color);
             border-radius: 20px;
             box-shadow: 0 10px 0 #4eb888;
@@ -80,8 +79,9 @@
             height: 40%;
             background-color: var(--dirt-color);
             border-radius: 50%;
+            /* 关键：确保土堆始终在地鼠上方，实现遮挡 */
+            z-index: 2; 
             box-shadow: inset 0 8px 15px rgba(0,0,0,0.3);
-            z-index: 2;
         }
 
         /* 地鼠 */
@@ -93,7 +93,7 @@
             top: 100%; 
             border-radius: 40% 40% 10% 10%;
             transition: top 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            z-index: 1;
+            z-index: 1; /* 地鼠在土堆下方 */
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -105,14 +105,13 @@
             top: 15%;
         }
 
-        /* 地鼠面部细节 */
+        /* 地鼠面部细节 (省略，与之前版本一致) */
         .mole-face {
             width: 100%;
             position: relative;
             top: 10%;
         }
 
-        /* 眼睛 */
         .eye {
             width: 8px;
             height: 8px;
@@ -125,7 +124,6 @@
         .eye.left { left: 25%; }
         .eye.right { right: 25%; }
 
-        /* 鼻子 */
         .nose {
             width: 15px;
             height: 10px;
@@ -156,7 +154,7 @@
             transform: rotate(90deg);
         }
         
-        /* 浮动得分特效 */
+        /* 浮动得分特效 (省略，与之前版本一致) */
         .score-pop {
             position: absolute;
             color: #fff;
@@ -173,7 +171,7 @@
             100% { transform: translateY(-50px) scale(1.5); opacity: 0; }
         }
 
-        /* 震动类 */
+        /* 震动类 (省略，与之前版本一致) */
         .shake {
             animation: shake 0.3s cubic-bezier(.36,.07,.19,.97) both;
         }
@@ -185,7 +183,7 @@
             40%, 60% { transform: translate3d(4px, 0, 0); }
         }
 
-        /* ------------------- 结算界面 (与打砖块一致) ------------------- */
+        /* 结算界面 (省略，与之前版本一致) */
         #ui-layer {
             position: absolute;
             top: 0;
@@ -270,7 +268,7 @@
     <div id="game-board">
         <div class="hud">
             <div>得分: <span id="score">0</span></div>
-            <div>时间: <span id="time">30</span></div>
+            <div>时间: <span id="time">60</span></div>
         </div>
 
         <div class="hole" id="hole1"><div class="mole"><div class="mole-face"><div class="eye left"></div><div class="eye right"></div><div class="nose"></div></div></div><div class="dirt"></div></div>
@@ -312,24 +310,35 @@
     const startBtn = document.getElementById('start-btn');
     const gameBoard = document.getElementById('game-board');
 
+    const GAME_DURATION = 60; // 游戏时长 60 秒 (M3)
+    const MAX_WAIT = 900;     // 最慢频率等待时间 (70% 对应约 900ms)
+    const MIN_WAIT = 400;     // 最快频率等待时间 (100% 对应约 400ms)
+
     let lastHole;
     let timeUp = true;
     let score = 0;
     let countdown;
-    let timeRemaining = 30;
+    let timeRemaining = GAME_DURATION;
     
-    // 从本地存储加载最高分，如果没有则默认为 0
     let highScore = localStorage.getItem('whac_a_mole_high_score') || 0;
-    finalHighScoreText.textContent = highScore; // 初始显示最高分
+    finalHighScoreText.textContent = highScore; 
 
-    // 随机时间间隔
-    function randomTime(min, max) {
-        // 随着分数提高，地鼠弹出时间可以稍微加快，增加难度
-        const effectiveMax = Math.max(min, max - score * 5); 
-        return Math.round(Math.random() * (effectiveMax - min) + min);
+    // M3: 根据游戏进程动态调整地鼠出现的随机等待时间
+    function randomWaitTime() {
+        const timeElapsed = GAME_DURATION - timeRemaining;
+        const progress = timeElapsed / GAME_DURATION; // 进度从 0 到 1
+        
+        // 线性调整最大等待时间，实现频率由慢到快
+        const decreaseRange = MAX_WAIT - MIN_WAIT;
+        const adjustedMax = MAX_WAIT - (decreaseRange * progress);
+        
+        // 确保 adjustedMax 不低于 MIN_WAIT
+        const adjustedMinWait = Math.max(MIN_WAIT, adjustedMax * 0.5); // 确保随机范围有变化，且最小值不会变动
+        
+        return Math.round(Math.random() * (adjustedMax - adjustedMinWait) + adjustedMinWait);
     }
 
-    // 随机选择坑洞
+    // 随机选择坑洞 (不变)
     function randomHole(holes) {
         const idx = Math.floor(Math.random() * holes.length);
         const hole = holes[idx];
@@ -340,34 +349,33 @@
         return hole;
     }
 
-    // 地鼠出现逻辑
+    // M3: 地鼠出现逻辑 (使用动态频率)
     function peep() {
         if (timeUp) return;
 
-        const time = randomTime(400, 900); // 调整了时间范围以适应手机操作
+        const time = randomWaitTime(); 
         const hole = randomHole(holes);
         const mole = hole.querySelector('.mole');
         
-        // 只有当该地鼠没有被击晕时才弹起
-        if(!mole.classList.contains('whacked')) {
+        // 只有当前地鼠没有被击晕且在洞里时才弹出
+        if(!mole.classList.contains('whacked') && !hole.classList.contains('up')) {
             hole.classList.add('up');
         }
 
+        // 地鼠在未被击中时，等待 `time` 时间后自动缩回
         setTimeout(() => {
-            hole.classList.remove('up');
-            
-            // 确保在它完全缩回后，重置地鼠状态（恢复正常表情）
-            setTimeout(() => {
-                mole.classList.remove('whacked');
-            }, 400); 
-
-            if (!timeUp) peep();
-        }, time);
+            // 如果地鼠还在上面，且没有被击晕（即没被打中），则缩回
+            if (hole.classList.contains('up') && !mole.classList.contains('whacked')) {
+                hole.classList.remove('up');
+            }
+            // 调度下一个地鼠弹出
+            if (!timeUp) peep(); 
+        }, time); 
     }
 
     function startGame() {
         scoreBoard.textContent = 0;
-        timeRemaining = 30;
+        timeRemaining = GAME_DURATION; // M3: 60 秒
         timeBoard.textContent = timeRemaining;
         score = 0;
         timeUp = false;
@@ -382,7 +390,7 @@
 
         peep();
         
-        // 倒计时逻辑
+        // M3: 倒计时逻辑
         countdown = setInterval(() => {
             timeRemaining--;
             timeBoard.textContent = timeRemaining;
@@ -396,13 +404,13 @@
     function endGame() {
         timeUp = true;
         
-        // 1. 更新最高分
+        // 更新最高分
         if (score > highScore) {
             highScore = score;
             localStorage.setItem('whac_a_mole_high_score', highScore);
         }
 
-        // 2. 刷新 UI
+        // 刷新 UI
         titleText.textContent = "时间到!";
         titleText.style.color = "#e74c3c";
         currentScoreText.textContent = score;
@@ -412,56 +420,64 @@
         uiLayer.classList.remove('hidden');
     }
 
-    // 创建浮动文字特效
+    // 创建浮动文字特效 (不变)
     function showFloatingText(x, y, text) {
         const el = document.createElement('div');
         el.classList.add('score-pop');
         el.textContent = text;
         
-        // 需要计算相对于游戏板的位置，以便在手机上也能正确显示
         const rect = gameBoard.getBoundingClientRect();
         el.style.left = (x - rect.left) + 'px';
         el.style.top = (y - rect.top) + 'px';
         
-        // 将浮动分数添加到游戏板容器内
         gameBoard.appendChild(el); 
         
-        // 动画结束后移除元素
         setTimeout(() => {
             el.remove();
         }, 800);
     }
 
-    // 击打事件处理
+    // M1: 击打事件处理 (添加 0.2 秒击晕停留)
     function bonk(e) {
-        if(timeUp) return; // 游戏结束时无效
+        if(timeUp) return; 
         
         const mole = this;
         const hole = mole.parentElement;
 
-        // 如果已经打过了，就不加分
         if(mole.classList.contains('whacked')) return;
 
         score++;
-        mole.classList.add('whacked'); // 改变表情
-        hole.classList.remove('up'); // 立即缩回
         scoreBoard.textContent = score;
 
-        // 获取点击位置，生成特效（使用 touches[0] 适配移动端）
+        // 1. 立即标记为击晕状态
+        mole.classList.add('whacked'); 
+
+        // 2. 击晕停留 200ms
+        setTimeout(() => {
+            // 3. 200ms 后，移除 'up' 类，开始下潜动画 (0.4s)
+            hole.classList.remove('up'); 
+            
+            // 4. 下潜动画结束后，移除 'whacked' 状态，恢复正常表情，准备下一次弹出
+            setTimeout(() => {
+                mole.classList.remove('whacked');
+            }, 400); // 400ms 是 CSS transition 的时长
+            
+        }, 200); // M1: 击晕停留 200ms
+        
+        // 5. 特效和震屏 (立即触发)
         const clientX = e.type === 'mousedown' ? e.clientX : e.touches[0].clientX;
         const clientY = e.type === 'mousedown' ? e.clientY : e.touches[0].clientY;
         showFloatingText(clientX, clientY, '+1');
 
-        // 震屏反馈
         gameBoard.classList.remove('shake');
-        void gameBoard.offsetWidth; // 强制重绘
+        void gameBoard.offsetWidth; 
         gameBoard.classList.add('shake');
     }
 
-    // 为每个地鼠添加点击和触摸监听
+    // 绑定点击和触摸监听 (不变)
     moles.forEach(mole => {
-        mole.addEventListener('mousedown', bonk); // 桌面端点击
-        mole.addEventListener('touchstart', bonk); // 移动端触摸
+        mole.addEventListener('mousedown', bonk);
+        mole.addEventListener('touchstart', bonk); 
     });
 
     startBtn.addEventListener('click', startGame);
