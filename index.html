@@ -2,18 +2,17 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>极简打地鼠</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>打地鼠呀</title>
     <style>
+        /* CSS样式：极简卡通 + 移动端适配 */
         @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap');
 
         :root {
-            --bg-color: #a8d8ea; /* 天空蓝背景 */
-            --grass-color: #69dba9; /* 草地绿 */
-            --dirt-color: #9b7653; /* 泥土色 */
-            --hole-shadow: #7a5c40;
-            --mole-color: #f1c40f; /* 地鼠：明黄色 */
-            --mole-shadow: #f39c12;
+            --bg-color: #a8d8ea; 
+            --grass-color: #69dba9; 
+            --dirt-color: #9b7653; 
+            --mole-color: #f1c40f; 
         }
 
         body {
@@ -23,46 +22,52 @@
             background-color: var(--bg-color);
             font-family: 'Fredoka One', cursive;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             user-select: none;
-            cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'  width='40' height='48' viewport='0 0 100 100' style='fill:black;font-size:24px;'><text y='50%'>🔨</text></svg>") 16 0, auto; /* 自定义锤子光标 */
             overflow: hidden;
+            /* 模拟锤子光标，移动端通常不显示，但保留桌面端效果 */
+            cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'  width='40' height='48' viewport='0 0 100 100' style='fill:black;font-size:24px;'><text y='50%'>🔨</text></svg>") 16 0, pointer; 
         }
 
-        /* 游戏区域容器 */
+        /* 游戏区域容器 (移动端适配) */
         #game-board {
             position: relative;
-            width: 600px;
-            height: 500px;
+            width: 90vw; /* 占据视口宽度的90% */
+            max-width: 450px; /* 最大宽度限制 */
+            aspect-ratio: 1 / 1; /* 保持正方形 */
             background-color: var(--grass-color);
             border-radius: 20px;
-            box-shadow: 0 15px 0 #4eb888; /* 草地厚度 */
-            padding: 20px;
+            box-shadow: 0 10px 0 #4eb888;
+            padding: 5vw; 
+            box-sizing: border-box;
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            grid-gap: 20px;
-            /* 震动动画占位 */
+            grid-gap: 3vw;
             transition: transform 0.1s;
         }
 
         /* 计分板和倒计时 */
         .hud {
             position: absolute;
-            top: -80px;
+            top: -40px;
             width: 100%;
             display: flex;
             justify-content: space-between;
             color: #2c3e50;
-            font-size: 32px;
-            text-shadow: 2px 2px 0 rgba(255,255,255,0.5);
+            font-size: 24px;
+            text-shadow: 1px 1px 0 rgba(255,255,255,0.5);
+            padding: 0 10px;
+            box-sizing: border-box;
         }
 
         /* 坑洞Wrapper */
         .hole {
             position: relative;
-            overflow: hidden; /* 隐藏躲进去的地鼠 */
+            overflow: hidden;
             border-radius: 50%;
+            aspect-ratio: 1 / 1;
             display: flex;
             justify-content: center;
         }
@@ -70,102 +75,97 @@
         /* 泥土堆（背景） */
         .dirt {
             position: absolute;
-            bottom: -20px;
+            bottom: -15%;
             width: 100%;
-            height: 60px;
+            height: 40%;
             background-color: var(--dirt-color);
             border-radius: 50%;
-            box-shadow: inset 0 10px 20px rgba(0,0,0,0.3);
+            box-shadow: inset 0 8px 15px rgba(0,0,0,0.3);
             z-index: 2;
         }
 
         /* 地鼠 */
         .mole {
-            width: 70%;
+            width: 80%;
             height: 100%;
             background-color: var(--mole-color);
             position: absolute;
-            top: 100%; /* 初始在坑下 */
+            top: 100%; 
             border-radius: 40% 40% 10% 10%;
-            transition: top 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* 弹性弹出效果 */
+            transition: top 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             z-index: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
-            box-shadow: inset -10px -10px 0 rgba(0,0,0,0.1);
+            box-shadow: inset -5px -5px 0 rgba(0,0,0,0.1);
         }
 
         /* 地鼠弹出状态 */
         .hole.up .mole {
-            top: 10%;
+            top: 15%;
         }
 
         /* 地鼠面部细节 */
         .mole-face {
             width: 100%;
-            height: 60px;
             position: relative;
-            top: 20px;
+            top: 10%;
         }
 
         /* 眼睛 */
         .eye {
-            width: 12px;
-            height: 12px;
+            width: 8px;
+            height: 8px;
             background: #333;
             border-radius: 50%;
             position: absolute;
-            top: 10px;
+            top: 5px;
             transition: all 0.1s;
         }
-        .eye.left { left: 30%; }
-        .eye.right { right: 30%; }
+        .eye.left { left: 25%; }
+        .eye.right { right: 25%; }
 
         /* 鼻子 */
         .nose {
-            width: 20px;
-            height: 15px;
+            width: 15px;
+            height: 10px;
             background: #e74c3c;
             border-radius: 50%;
             position: absolute;
-            top: 25px;
+            top: 18px;
             left: 50%;
             transform: translateX(-50%);
         }
 
         /* 被击中时的样式 */
         .mole.whacked {
-            background-color: #ff9ff3; /* 变色 */
+            background-color: #ff9ff3;
         }
         .mole.whacked .eye {
-            width: 16px;
-            height: 4px;
+            width: 12px;
+            height: 3px;
             border-radius: 0;
-            transform: rotate(45deg); /* 变成叉叉眼的一部分 */
-            background: #333;
+            transform: rotate(45deg);
         }
         .mole.whacked .eye::after {
             content: '';
             position: absolute;
-            width: 16px;
-            height: 4px;
+            width: 12px;
+            height: 3px;
             background: #333;
             transform: rotate(90deg);
         }
-        .mole.whacked .nose {
-            top: 30px;
-        }
-
+        
         /* 浮动得分特效 */
         .score-pop {
             position: absolute;
             color: #fff;
-            font-size: 24px;
+            font-size: 20px;
             font-weight: bold;
             pointer-events: none;
             animation: floatUp 0.8s ease-out forwards;
-            z-index: 10;
-            text-shadow: 2px 2px 0 #000;
+            z-index: 100;
+            text-shadow: 1px 1px 0 #000;
         }
 
         @keyframes floatUp {
@@ -185,7 +185,7 @@
             40%, 60% { transform: translate3d(4px, 0, 0); }
         }
 
-        /* UI 层 (与打砖块游戏保持一致) */
+        /* ------------------- 结算界面 (与打砖块一致) ------------------- */
         #ui-layer {
             position: absolute;
             top: 0;
@@ -196,10 +196,11 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            background: rgba(44, 62, 80, 0.85);
-            backdrop-filter: blur(8px);
+            background: rgba(52, 73, 94, 0.95);
+            backdrop-filter: blur(5px);
             z-index: 100;
             transition: opacity 0.3s;
+            text-align: center;
         }
 
         #ui-layer.hidden {
@@ -209,16 +210,45 @@
 
         h1 {
             color: #f1c40f;
-            font-size: 60px;
-            margin: 0 0 20px 0;
-            text-shadow: 4px 4px 0 #e67e22;
+            font-size: 50px;
+            margin-bottom: 20px;
+            text-shadow: 3px 3px 0 #e67e22;
             transform: rotate(-3deg);
+        }
+
+        .score-box {
+            background: #fff;
+            padding: 15px 30px;
+            margin: 10px 0;
+            border-radius: 15px;
+            box-shadow: 0 5px 0 #bdc3c7;
+            width: 70%;
+            max-width: 300px;
+        }
+        
+        .score-box p {
+             font-size: 18px;
+             color: #7f8c8d;
+             margin: 0 0 5px 0;
+        }
+        
+        .score-box .score-value {
+             font-size: 36px;
+             color: #2c3e50;
+        }
+
+        #current-score {
+            color: #2ecc71;
+        }
+        
+        #high-score-display {
+            color: #e67e22;
         }
 
         button {
             margin-top: 30px;
-            padding: 15px 40px;
-            font-size: 24px;
+            padding: 18px 50px;
+            font-size: 26px;
             font-family: 'Fredoka One', cursive;
             background-color: #e74c3c;
             color: white;
@@ -233,16 +263,6 @@
             transform: translateY(4px);
             box-shadow: 0 4px 0 #c0392b;
         }
-        
-        button:hover {
-            background-color: #ff6b6b;
-        }
-        
-        /* 鼠标点击时的激活状态 */
-        body:active {
-            cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'  width='40' height='48' viewport='0 0 100 100' style='fill:black;font-size:24px;transform:rotate(-45deg);transform-origin:center;'><text y='50%'>🔨</text></svg>") 16 0, auto; 
-        }
-
     </style>
 </head>
 <body>
@@ -262,12 +282,22 @@
         <div class="hole" id="hole7"><div class="mole"><div class="mole-face"><div class="eye left"></div><div class="eye right"></div><div class="nose"></div></div></div><div class="dirt"></div></div>
         <div class="hole" id="hole8"><div class="mole"><div class="mole-face"><div class="eye left"></div><div class="eye right"></div><div class="nose"></div></div></div><div class="dirt"></div></div>
         <div class="hole" id="hole9"><div class="mole"><div class="mole-face"><div class="eye left"></div><div class="eye right"></div><div class="nose"></div></div></div><div class="dirt"></div></div>
-    </div>
+    
+        <div id="ui-layer">
+            <h1 id="title-text">打地鼠!</h1>
+            
+            <div class="score-box">
+                <p>最高得分 (历史)</p>
+                <div id="high-score-display" class="score-value">0</div>
+            </div>
 
-    <div id="ui-layer">
-        <h1 id="title-text">打地鼠!</h1>
-        <p style="color:white; font-size: 24px;">最终得分: <span id="final-score" style="color:#2ecc71;">0</span></p>
-        <button id="start-btn" onclick="startGame()">开始游戏</button>
+            <div class="score-box">
+                <p>当前得分</p>
+                <div id="current-score" class="score-value">0</div>
+            </div>
+
+            <button id="start-btn">开始游戏</button>
+        </div>
     </div>
 
 <script>
@@ -277,19 +307,26 @@
     const moles = document.querySelectorAll('.mole');
     const uiLayer = document.getElementById('ui-layer');
     const titleText = document.getElementById('title-text');
-    const finalScoreText = document.getElementById('final-score');
+    const currentScoreText = document.getElementById('current-score');
+    const finalHighScoreText = document.getElementById('high-score-display');
     const startBtn = document.getElementById('start-btn');
     const gameBoard = document.getElementById('game-board');
 
     let lastHole;
-    let timeUp = false;
+    let timeUp = true;
     let score = 0;
     let countdown;
     let timeRemaining = 30;
+    
+    // 从本地存储加载最高分，如果没有则默认为 0
+    let highScore = localStorage.getItem('whac_a_mole_high_score') || 0;
+    finalHighScoreText.textContent = highScore; // 初始显示最高分
 
     // 随机时间间隔
     function randomTime(min, max) {
-        return Math.round(Math.random() * (max - min) + min);
+        // 随着分数提高，地鼠弹出时间可以稍微加快，增加难度
+        const effectiveMax = Math.max(min, max - score * 5); 
+        return Math.round(Math.random() * (effectiveMax - min) + min);
     }
 
     // 随机选择坑洞
@@ -305,7 +342,9 @@
 
     // 地鼠出现逻辑
     function peep() {
-        const time = randomTime(500, 1000); // 地鼠停留时间
+        if (timeUp) return;
+
+        const time = randomTime(400, 900); // 调整了时间范围以适应手机操作
         const hole = randomHole(holes);
         const mole = hole.querySelector('.mole');
         
@@ -316,10 +355,11 @@
 
         setTimeout(() => {
             hole.classList.remove('up');
-            // 每次下潜后，重置地鼠状态（恢复正常表情）
+            
+            // 确保在它完全缩回后，重置地鼠状态（恢复正常表情）
             setTimeout(() => {
                 mole.classList.remove('whacked');
-            }, 400); // 等待下潜动画结束
+            }, 400); 
 
             if (!timeUp) peep();
         }, time);
@@ -334,6 +374,12 @@
         
         uiLayer.classList.add('hidden');
         
+        // 重置所有地鼠状态
+        moles.forEach(mole => {
+            mole.classList.remove('whacked');
+            mole.parentElement.classList.remove('up');
+        });
+
         peep();
         
         // 倒计时逻辑
@@ -349,9 +395,20 @@
 
     function endGame() {
         timeUp = true;
+        
+        // 1. 更新最高分
+        if (score > highScore) {
+            highScore = score;
+            localStorage.setItem('whac_a_mole_high_score', highScore);
+        }
+
+        // 2. 刷新 UI
         titleText.textContent = "时间到!";
-        finalScoreText.textContent = score;
+        titleText.style.color = "#e74c3c";
+        currentScoreText.textContent = score;
+        finalHighScoreText.textContent = highScore;
         startBtn.textContent = "再来一局";
+        
         uiLayer.classList.remove('hidden');
     }
 
@@ -360,9 +417,14 @@
         const el = document.createElement('div');
         el.classList.add('score-pop');
         el.textContent = text;
-        el.style.left = x + 'px';
-        el.style.top = y + 'px';
-        document.body.appendChild(el);
+        
+        // 需要计算相对于游戏板的位置，以便在手机上也能正确显示
+        const rect = gameBoard.getBoundingClientRect();
+        el.style.left = (x - rect.left) + 'px';
+        el.style.top = (y - rect.top) + 'px';
+        
+        // 将浮动分数添加到游戏板容器内
+        gameBoard.appendChild(el); 
         
         // 动画结束后移除元素
         setTimeout(() => {
@@ -372,9 +434,8 @@
 
     // 击打事件处理
     function bonk(e) {
-        if(!e.isTrusted) return; // 防止脚本作弊
+        if(timeUp) return; // 游戏结束时无效
         
-        // 此时 `this` 指向被点击的 mole 元素
         const mole = this;
         const hole = mole.parentElement;
 
@@ -386,17 +447,24 @@
         hole.classList.remove('up'); // 立即缩回
         scoreBoard.textContent = score;
 
-        // 获取点击位置，生成特效
-        showFloatingText(e.pageX, e.pageY, '+1');
+        // 获取点击位置，生成特效（使用 touches[0] 适配移动端）
+        const clientX = e.type === 'mousedown' ? e.clientX : e.touches[0].clientX;
+        const clientY = e.type === 'mousedown' ? e.clientY : e.touches[0].clientY;
+        showFloatingText(clientX, clientY, '+1');
 
         // 震屏反馈
         gameBoard.classList.remove('shake');
-        void gameBoard.offsetWidth; // 触发重绘，允许重复播放动画
+        void gameBoard.offsetWidth; // 强制重绘
         gameBoard.classList.add('shake');
     }
 
-    // 为每个地鼠添加点击监听
-    moles.forEach(mole => mole.addEventListener('mousedown', bonk)); // 使用 mousedown 响应更快
+    // 为每个地鼠添加点击和触摸监听
+    moles.forEach(mole => {
+        mole.addEventListener('mousedown', bonk); // 桌面端点击
+        mole.addEventListener('touchstart', bonk); // 移动端触摸
+    });
+
+    startBtn.addEventListener('click', startGame);
 
 </script>
 </body>
