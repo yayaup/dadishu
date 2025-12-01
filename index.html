@@ -268,7 +268,7 @@
     <div id="game-board">
         <div class="hud">
             <div>得分: <span id="score">0</span></div>
-            <div>时间: <span id="time">60</span></div>
+            <div>时间: <span id="time">30</span></div>
         </div>
 
         <div class="hole" id="hole1"><div class="mole"><div class="mole-face"><div class="eye left"></div><div class="eye right"></div><div class="nose"></div></div></div><div class="dirt"></div></div>
@@ -311,8 +311,8 @@
     const gameBoard = document.getElementById('game-board');
 
     const GAME_DURATION = 30; // 游戏时长 30 秒 (M3)
-    const MAX_WAIT = 1200;     // 最慢频率等待时间 (70% 对应约 1200ms)
-    const MIN_WAIT = 600;     // 最快频率等待时间 (100% 对应约 600ms)
+    const MAX_WAIT = 1000;     // 最慢频率等待时间 (70% 对应约 1200ms)
+    const MIN_WAIT = 400;     // 最快频率等待时间 (100% 对应约 600ms)
 
     let lastHole;
     let timeUp = true;
@@ -333,7 +333,7 @@
         const adjustedMax = MAX_WAIT - (decreaseRange * progress);
         
         // 确保 adjustedMax 不低于 MIN_WAIT
-        const adjustedMinWait = Math.max(MIN_WAIT, adjustedMax * 0.7); // 确保随机范围有变化，且最小值不会变动
+        const adjustedMinWait = Math.max(MIN_WAIT, adjustedMax * 0.45); // 确保随机范围有变化，且最小值不会变动
         
         return Math.round(Math.random() * (adjustedMax - adjustedMinWait) + adjustedMinWait);
     }
@@ -485,4 +485,5 @@
 </script>
 </body>
 </html>
+
 
